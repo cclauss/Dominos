@@ -5,7 +5,7 @@ This is an animated Dominos game programmed in Python using Pygame modules.
 Rules:
 - You and the computer player each draw 7 pieces.
 - The highest double piece on either hand is played.
-- You and the computer player take turns playing fitting pieces.
+- You and the computer player take turns. Either play a fitting piece or draw a new piece.
 - You score only, if the sum of both ends of the line of dominos on the table is devisible by 3 or 5.
   The score equals the sum devided by 3 or 5.
   Examples:
