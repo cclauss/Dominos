@@ -1,0 +1,374 @@
+import os
+import string
+import random
+import pygame, sys
+from pygame.locals import *
+
+BLACK = (  0,   0,   0)
+WHITE = (255, 255, 255)
+PURPLE = (100,0,100)
+RED = (75,0,0)
+GREEN = (0,100,0)
+
+def main():
+    global DISPLAYSURF
+    global domino
+    global player1, player2
+    global FPSCLOCK
+    pygame.init()
+    FPSCLOCK = pygame.time.Clock()
+    FPS = 30
+    DISPLAYSURF = pygame.display.set_mode((1300, 600), 0, 32)
+    pygame.display.set_caption('Dominos')
+    player1 = player("You") #player classes
+    player2 = player("Computer")
+    domino = statistic() #game statistics class
+    start = startclass()
+    start.generate() #generates 28 domino pieces
+    start.drawhand(player1)
+    start.drawhand(player2)
+    domino.turn = start.first() #plays the highest double piece on either hand
+    location = 0 #index of selected piece
+    selected = False #Enter pressed?
+    
+    start.startgameanimation()
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == K_LEFT:
+                    if location > 0:
+                        location -= 1
+                elif event.key == K_RIGHT:
+                    if location < len(player1.hand):
+                        location += 1
+                elif event.key == K_RETURN:
+                    selected = True
+
+        selectpiece = "Choose a piece or draw from the pile."
+        # if loop for game end
+        if len(player1.hand) == 0 or len(player2.hand) == 0:
+            if player1.score > player2.score: text = "You won!"
+            elif player1.score < player2.score: text = "The Computer won!"
+            else: text = "Its a draw"
+            DISPLAYSURF.fill(WHITE)
+            printtext(text, 50, PURPLE)
+            pygame.display.update()
+            pygame.time.wait(5000)
+            pygame.quit()
+            sys.exit()
+            pygame.mixer.music.stop()
+        else: # if game has not ended, update display with current selected piece
+            updateboard(location, selectpiece)
+        # player's turn
+        if selected:
+            if location == 0: #pile
+                updateboard(location, drawpiece(player1))
+                pygame.time.wait(1000)
+            else:
+                if appendpiece(location-1): #True for fitting piece
+                    player1.hand.pop(location-1)
+                    points = updatescore(player1)
+                    if points == 1: text = "You score 1 point."
+                    else: text = "You score %d points." %points
+                    location = 0
+                    updateboard(location, text)
+                    pygame.time.wait(2000)
+
+                else:
+                    updateboard(location, "This piece does not fit.")
+                    pygame.time.wait(1000)
+                    selected = False
+                    #new piece has to be selected, skips computer's turn
+        # computer's turn
+        if selected:
+            played = computerturn()
+            points = 0
+            if played:
+                points = updatescore(player2)
+                if points == 1: text = "The Computer scores 1 point."
+                else: text = "The Computer scored %d points." %points
+            else: text = "The Computer draws from the pile."
+            updateboard(location, text)
+            pygame.time.wait(1500)
+            selected = False
+
+
+class player(object):
+    def __init__(self, name):
+        self.hand = []
+        self.score = 0
+        self.name = name
+
+class statistic(object):
+    def __init__(self):
+        self.table = []
+        self.pile = []
+        self.turn = player1
+
+class startclass:
+    def startgameanimation(self):
+        #prints DOMINO to display
+        DISPLAYSURF.fill(WHITE)
+        textobj = pygame.font.Font('freesansbold.ttf', 80)
+        textsurfaceobj = textobj.render("DOMINOS", True, PURPLE, WHITE)
+        textrectobj = textsurfaceobj.get_rect()
+        textrectobj.center = (400, 270)
+        DISPLAYSURF.blit(textsurfaceobj, textrectobj)
+        pygame.display.update()
+        pygame.time.wait(1500)
+
+        #prints the rules to the display
+        text = ["RULES", "Play a fitting piece.", "You score points if the sum of both ends is devisable by 3 or 5.", "You score the quotient. e.g.  12 / 3 = 4",
+            "The game ends when one of the players runs out of pieces.", "The winner is the player with the most points.", "CONTROLS: arrow keys and Enter.",
+            "", "", "To continue, press ENTER"]
+        DISPLAYSURF.fill(WHITE)
+        position = 200
+        for line in text:
+            textobj = pygame.font.Font('freesansbold.ttf', 20)
+            textsurfaceobj = textobj.render(line, True, BLACK, WHITE)
+            textrectobj = textsurfaceobj.get_rect()
+            textrectobj.center = (620, position)
+            DISPLAYSURF.blit(textsurfaceobj, textrectobj)
+            position += 30
+        pygame.display.update()
+        startgame = False
+        while startgame == False:
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == K_RETURN:
+                        startgame = True
+
+    def generate(self): #generates domino pile with 28 pieces
+        for i in range(7):
+            for j in range(i + 1):
+                domino.pile.append([i, j])
+
+    def drawhand(self, player): #draws 7 pieces to each player's hand
+        for x in range(7):
+            n = random.randint(0, len(domino.pile)-1)
+            add = domino.pile.pop(n)
+            player.hand.append(add)
+
+    def first(self): #player with a double piece has to play it first
+        for piece in [[1,1], [2,2], [3,3], [4,4], [5,5], [6,6]]:
+            for player in [player1, player2]:
+                if piece in player.hand:
+                    player.hand.remove(piece)
+                    domino.table.append(piece)
+                    pygame.display.update()
+                    if player == player1:
+                        return player2
+                    else:
+                        return player1
+        if domino.table == []: #for the rare case that nobody has any double piece, game quits
+            print "\nrandom error, please restart game\n"
+            pygame.quit()
+            sys.exit()
+
+
+
+
+def drawpiece(player): #draws piece from pile to player's hand
+    if len(domino.pile) != 0:
+        n = random.randint(0, len(domino.pile)-1)
+        player.hand.append(domino.pile.pop(n))
+        return "You draw from the pile"
+    else: return "The pile is empty"
+
+
+def appendpiece(location): #adds selected piece at location of player's hand to the table
+    optioncount = 0
+    optionselect = ()
+    piece = player1.hand[location]
+    a, b = domino.table[0][0], domino.table[len(domino.table)-1][1] #both ends of the table
+    for tableside in (a, b):
+        for pieceside in (0, 1):
+            if tableside == piece[pieceside]: #if piece fits, select this option
+                optionselect = optioncount
+            optioncount += 1
+    #depending on option, turns the piece and appends it to either end
+    if optionselect == 0:
+        domino.table.insert(0, piece[::-1])
+        return True
+    elif optionselect == 1:
+        domino.table.insert(0, piece)
+        return True
+    elif optionselect == 2:
+        domino.table.append(piece)
+        return True
+    elif optionselect == 3:
+        domino.table.append(piece[::-1])
+        return True
+    return False #if no piece fits, optionselect = ()
+
+def computerturn():
+    maxsum = indexcount = indexselect = optionselect = 0
+    selected = False
+    a, b = domino.table[0][0], domino.table[len(domino.table)-1][1] #sides of table
+    for piece in player2.hand: #iterates through all pieces in computer's hand
+        optioncount = 0
+        for tableside in (a, b):
+            for pieceside in (0, 1):
+                if tableside == piece[pieceside]:
+                    tablecount = 0
+                    for i in (a, b, piece[0], piece[1]):
+                        if i != tableside:
+                            tablecount += i
+                    sum = 0
+                    if tablecount %3 == 0: sum = tablecount/3
+                    elif tablecount %5 == 0: sum = tablecount/5
+                    if sum >= maxsum:
+                        selected = True
+                        optionselect = optioncount
+                        maxsum = sum
+                        indexselect = indexcount
+                        #if piece gives more points, select index of piece
+                optioncount += 1
+        indexcount += 1
+    if not selected: #no piece fits, draw and return False
+        drawpiece(player2)
+        return False
+    piece = player2.hand[indexselect]
+    if optionselect == 0:
+        domino.table.insert(0, piece[::-1])
+        player2.hand.pop(indexselect)
+    elif optionselect == 1:
+        domino.table.insert(0, piece)
+        player2.hand.pop(indexselect)
+    elif optionselect == 2:
+        domino.table.append(piece)
+        player2.hand.pop(indexselect)
+    elif optionselect == 3:
+        domino.table.append(piece[::-1])
+        player2.hand.pop(indexselect)
+    return True
+
+def updatescore(player):
+    tablesum = domino.table[0][0] + domino.table[len(domino.table)-1][1] #sum of points of both ends
+    points = 0
+    if tablesum %3 == 0: #if devisable by 3
+        player.score += tablesum/3
+        points += tablesum/3
+    elif tablesum %5 == 0: #if devisable by 5
+        player.score += tablesum/5
+        points += tablesum/5
+    return points
+
+def updateboard(location, text):
+    DISPLAYSURF.fill(WHITE)
+    highlight(location)
+    printpile()
+    printscore()
+    printtable()
+    printhand()
+    printtext(text, 18, GREEN)
+    pygame.display.update()
+
+
+def highlight(location): #highlights where curser is
+    if location == 0:
+        pygame.draw.circle(DISPLAYSURF, GREEN, (150, 380), 60)
+    else:
+        n = location - 1
+        column = n%8
+        row = (n-column)/8
+        pygame.draw.circle(DISPLAYSURF, GREEN, (100+column*150, 470+ row*80), 60)
+
+
+def printtable():
+    for n in range(len(domino.table)):
+        column = n%8
+        row = (n-column)/8
+        printpiece(domino.table[n], (50+ column*150, 30+ row*80))
+
+def printhand():
+    for n in range(len(player1.hand)):
+        column = n%8
+        row = (n-column)/8
+        printpiece(player1.hand[n], (50+ column*150, 450+ row*80))
+
+def printpile():
+    pygame.draw.rect(DISPLAYSURF, BLACK, (90, 340, 110, 60))
+    pygame.draw.rect(DISPLAYSURF, BLACK, (100, 350, 110, 60))
+    pygame.draw.rect(DISPLAYSURF, RED, (105, 355, 100, 50))
+
+def printtext(text, size, color):
+    pygame.draw.rect(DISPLAYSURF, WHITE, (350, 350, 150, 50))
+    textobj = pygame.font.Font('freesansbold.ttf', size)
+    textsurfaceobj = textobj.render(text, True, color, WHITE)
+    textrectobj = textsurfaceobj.get_rect()
+    textrectobj.center = (450, 370)
+    DISPLAYSURF.blit(textsurfaceobj, textrectobj)
+
+def printscore():
+    text = "SCORE | You: %d | Computer: %d" %(player1.score, player2.score)
+    pygame.draw.rect(DISPLAYSURF, WHITE, (900, 350, 150, 50))
+    textobj = pygame.font.Font('freesansbold.ttf', 18)
+    textsurfaceobj = textobj.render(text, True, GREEN, WHITE)
+    textrectobj = textsurfaceobj.get_rect()
+    textrectobj.center = (950, 370)
+    DISPLAYSURF.blit(textsurfaceobj, textrectobj)
+
+
+def printpiece(piece, position): #prints a single piece at a given position, used by printtable() and printhand()
+    def printdots(number, centre): #prints the given number of dots around a centre
+        def printdot(dot, centre): #prints a single dot at a position given by two letters
+            if dot == "AA":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0]-15, centre[1]-15), 3, 3)
+            elif dot == "AB":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0]-15, centre[1]),    3, 3)
+            elif dot == "AC":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0]-15, centre[1]+15), 3, 3)
+            elif dot == "BB":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0],    centre[1]),    3, 3)
+            elif dot == "CA":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0]+15, centre[1]-15), 3, 3)
+            elif dot == "CB":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0]+15, centre[1]),    3, 3)
+            elif dot == "CC":
+                pygame.draw.circle(DISPLAYSURF, BLACK, (centre[0]+15, centre[1]+15), 3, 3)
+
+        if number == 1:
+            printdot("BB", centre)
+        elif number == 2:
+            printdot("AC", centre)
+            printdot("CA", centre)
+        elif number == 3:
+            printdot("AC", centre)
+            printdot("BB", centre)
+            printdot("CA", centre)
+        elif number == 4:
+            printdot("AA", centre)
+            printdot("CA", centre)
+            printdot("AC", centre)
+            printdot("CC", centre)
+        elif number == 5:
+            printdot("AA", centre)
+            printdot("CA", centre)
+            printdot("BB", centre)
+            printdot("AC", centre)
+            printdot("CC", centre)
+        elif number == 6:
+            printdot("AA", centre)
+            printdot("AB", centre)
+            printdot("AC", centre)
+            printdot("CA", centre)
+            printdot("CB", centre)
+            printdot("CC", centre)
+
+    #draws the outer lines of the piece
+    pygame.draw.rect(DISPLAYSURF, BLACK, (position[0]-5, position[1]-5, 110, 60))
+    pygame.draw.rect(DISPLAYSURF, WHITE, (position[0], position[1], 100, 50))
+    pygame.draw.line(DISPLAYSURF, BLACK, (position[0]+50, position[1]), (position[0]+50, position[1]+50), 2)
+    #draws the dots on both sides
+    printdots(piece[0], (position[0]+25, position[1]+25))
+    printdots(piece[1], (position[0]+75, position[1]+25))
+ 
+
+if __name__ == '__main__':
+    main()
+
