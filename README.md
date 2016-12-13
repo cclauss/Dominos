@@ -9,8 +9,8 @@ Rules:
 - You score only, if the sum of both ends of the line of dominos on the table is devisible by 3 or 5.
   The score equals the sum devided by 3 or 5.
   Examples:
-    ends = 3 + 6 = 9. 9 is not devisable by 3 or 5. Score = 0.
-    ends = 4 + 6 = 10. 10 is devisable by 5. Score = 10 / 5 = 2.
+  - ends = 3 + 6 = 9. 9 is not devisable by 3 or 5. Score = 0.
+  - ends = 4 + 6 = 10. 10 is devisable by 5. Score = 10 / 5 = 2.
 - The game ends, when one of the players runs out of pieces.
 - The player with the higher score wins.
 
