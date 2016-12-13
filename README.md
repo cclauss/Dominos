@@ -1,4 +1,4 @@
-# Dominos-game-Pygame-
+# Dominos
 
 This is an animated Dominos game programmed in Python using Pygame modules.
 
