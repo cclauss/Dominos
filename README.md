@@ -13,3 +13,6 @@ Rules:
     ends = 4 + 6 = 10. 10 is devisable by 5. Score = 10 / 5 = 2.
 - The game ends, when one of the players runs out of pieces.
 - The player with the higher score wins.
+
+Controls:
+Use the arrow keys to select the piece you want to play and press enter.
